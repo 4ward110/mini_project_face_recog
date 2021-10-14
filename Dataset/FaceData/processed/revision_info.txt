@@ -1,7 +1,0 @@
-arguments: src/align_dataset_mtcnn.py data_set/face_data/raw data_set/face_data/processed --image_size 160 --margin 32 --random_order --gpu_memory_fraction 0.25
---------------------
-tensorflow version: 2.2.0
---------------------
-git hash: b'HEAD'
---------------------
-b''

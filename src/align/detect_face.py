@@ -85,10 +85,10 @@ class Network(object):
         data_dict = np.load(data_path, encoding='latin1',allow_pickle=True).item() #pylint: disable=no-member
 
         for op_name in data_dict:
-            with tf.variable_scope(op_name, reuse=True):
+            with tf.compat.v1.variable_scope(op_name, reuse=True):
                 for param_name, data in iteritems(data_dict[op_name]):
                     try:
-                        var = tf.get_variable(param_name)
+                        var = tf.compat.v1.get_variable(param_name)
                         session.run(var.assign(data))
                     except ValueError:
                         if not ignore_missing:
@@ -150,25 +150,25 @@ class Network(object):
         assert c_o % group == 0
         # Convolution for a given input and kernel
         convolve = lambda i, k: tf.nn.conv2d(i, k, [1, s_h, s_w, 1], padding=padding)
-        with tf.variable_scope(name) as scope:
+        with tf.compat.v1.variable_scope(name) as scope:
             kernel = self.make_var('weights', shape=[k_h, k_w, c_i // group, c_o])
             # This is the common-case. Convolve the input without any further complications.
             output = convolve(inp, kernel)
             # Add the biases
             if biased:
                 biases = self.make_var('biases', [c_o])
-                output = tf.nn.bias_add(output, biases)
+                output = tf.compat.v1.nn.bias_add(output, biases)
             if relu:
                 # ReLU non-linearity
-                output = tf.nn.relu(output, name=scope.name)
+                output = tf.compat.v1.nn.relu(output, name=scope.name)
             return output
 
     @layer
     def prelu(self, inp, name):
-        with tf.variable_scope(name):
+        with tf.compat.v1.variable_scope(name):
             i = int(inp.get_shape()[-1])
             alpha = self.make_var('alpha', shape=(i,))
-            output = tf.nn.relu(inp) + tf.multiply(alpha, -tf.nn.relu(-inp))
+            output = tf.compat.v1.nn.relu(inp) + tf.compat.v1.multiply(alpha, -tf.compat.v1.nn.relu(-inp))
         return output
 
     @layer
@@ -182,19 +182,19 @@ class Network(object):
 
     @layer
     def fc(self, inp, num_out, name, relu=True):
-        with tf.variable_scope(name):
+        with tf.compat.v1.variable_scope(name):
             input_shape = inp.get_shape()
             if input_shape.ndims == 4:
                 # The input is spatial. Vectorize it first.
                 dim = 1
                 for d in input_shape[1:].as_list():
                     dim *= int(d)
-                feed_in = tf.reshape(inp, [-1, dim])
+                feed_in = tf.compat.v1.reshape(inp, [-1, dim])
             else:
                 feed_in, dim = (inp, input_shape[-1].value)
             weights = self.make_var('weights', shape=[dim, num_out])
             biases = self.make_var('biases', [num_out])
-            op = tf.nn.relu_layer if relu else tf.nn.xw_plus_b
+            op = tf.compat.v1.nn.relu_layer if relu else tf.compat.v1.nn.xw_plus_b
             fc = op(feed_in, weights, biases, name=name)
             return fc
 
@@ -207,10 +207,10 @@ class Network(object):
     """
     @layer
     def softmax(self, target, axis, name=None):
-        max_axis = tf.reduce_max(target, axis, keepdims=True)
-        target_exp = tf.exp(target-max_axis)
-        normalize = tf.reduce_sum(target_exp, axis, keepdims=True)
-        softmax = tf.div(target_exp, normalize, name)
+        max_axis = tf.compat.v1.reduce_max(target, axis, keepdims=True)
+        target_exp = tf.compat.v1.exp(target-max_axis)
+        normalize = tf.compat.v1.reduce_sum(target_exp, axis, keepdims=True)
+        softmax = tf.compat.v1.div(target_exp, normalize, name)
         return softmax
     
 class PNet(Network):
@@ -281,12 +281,12 @@ def create_mtcnn(sess, model_path):
         data = tf.compat.v1.placeholder(tf.float32, (None,None,None,3), 'input')
         pnet = PNet({'data':data})
         pnet.load(os.path.join(model_path, 'det1.npy'), sess)
-    with tf.variable_scope('rnet'):
-        data = tf.placeholder(tf.float32, (None,24,24,3), 'input')
+    with tf.compat.v1.variable_scope('rnet'):
+        data = tf.compat.v1.placeholder(tf.float32, (None,24,24,3), 'input')
         rnet = RNet({'data':data})
         rnet.load(os.path.join(model_path, 'det2.npy'), sess)
-    with tf.variable_scope('onet'):
-        data = tf.placeholder(tf.float32, (None,48,48,3), 'input')
+    with tf.compat.v1.variable_scope('onet'):
+        data = tf.compat.v1.placeholder(tf.float32, (None,48,48,3), 'input')
         onet = ONet({'data':data})
         onet.load(os.path.join(model_path, 'det3.npy'), sess)
         

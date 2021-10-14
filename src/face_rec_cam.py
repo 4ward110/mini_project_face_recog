@@ -18,7 +18,24 @@ import numpy as np
 import cv2
 import collections
 from sklearn.svm import SVC
+import pyttsx3
 
+engine = pyttsx3.init()
+
+def change_voice(engine, language):
+    for voice in engine.getProperty('voices'):
+        if language in voice.languages:
+            engine.setProperty('voice', voice.id)
+            return True
+
+    raise RuntimeError("Language '{}' for gender not found".format(language))
+
+# change language
+change_voice(engine, b'\x05vi-sgn')
+
+#change voice rate
+rate = engine.getProperty('rate')
+engine.setProperty('rate', 160)
 
 def main():
     parser = argparse.ArgumentParser()
@@ -39,10 +56,10 @@ def main():
         model, class_names = pickle.load(file)
     print("Custom Classifier, Successfully loaded")
 
-    with tf.Graph().as_default():
+    with tf.compat.v1.Graph().as_default():
 
-        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.6)
-        sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, log_device_placement=False))
+        gpu_options = tf.compat.v1.GPUOptions(per_process_gpu_memory_fraction=0.6)
+        sess = tf.compat.v1.Session(config=tf.compat.v1.ConfigProto(gpu_options=gpu_options, log_device_placement=False))
 
         with sess.as_default():
 
@@ -51,9 +68,9 @@ def main():
             facenet.load_model(FACENET_MODEL_PATH)
 
             # Get input and output tensors
-            images_placeholder = tf.get_default_graph().get_tensor_by_name("input:0")
-            embeddings = tf.get_default_graph().get_tensor_by_name("embeddings:0")
-            phase_train_placeholder = tf.get_default_graph().get_tensor_by_name("phase_train:0")
+            images_placeholder = tf.compat.v1.get_default_graph().get_tensor_by_name("input:0")
+            embeddings = tf.compat.v1.get_default_graph().get_tensor_by_name("embeddings:0")
+            phase_train_placeholder = tf.compat.v1.get_default_graph().get_tensor_by_name("phase_train:0")
             embedding_size = embeddings.get_shape()[1]
 
             pnet, rnet, onet = align.detect_face.create_mtcnn(sess, "src/align")
@@ -102,9 +119,7 @@ def main():
                                 best_name = class_names[best_class_indices[0]]
                                 print("Name: {}, Probability: {}".format(best_name, best_class_probabilities))
 
-
-
-                                if best_class_probabilities > 0.8:
+                                if best_class_probabilities > 0.95:
                                     cv2.rectangle(frame, (bb[i][0], bb[i][1]), (bb[i][2], bb[i][3]), (0, 255, 0), 2)
                                     text_x = bb[i][0]
                                     text_y = bb[i][3] + 20
@@ -116,8 +131,17 @@ def main():
                                                 cv2.FONT_HERSHEY_COMPLEX_SMALL,
                                                 1, (255, 255, 255), thickness=1, lineType=2)
                                     person_detected[best_name] += 1
+                                    engine.say("Đây là {}".format(name))
+                                    engine.runAndWait()
                                 else:
+                                    cv2.rectangle(frame, (bb[i][0], bb[i][1]), (bb[i][2], bb[i][3]), (0, 255, 0), 2)
+                                    text_x = bb[i][0]
+                                    text_y = bb[i][3] + 20
                                     name = "Unknown"
+                                    cv2.putText(frame, name, (text_x, text_y), cv2.FONT_HERSHEY_COMPLEX_SMALL,
+                                                1, (255, 255, 255), thickness=1, lineType=2)
+                                    engine.say("Người lạ")
+                                    engine.runAndWait()
 
                 except:
                     pass
