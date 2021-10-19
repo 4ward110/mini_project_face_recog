@@ -5,7 +5,6 @@ from __future__ import print_function
 import tensorflow as tf
 from imutils.video import VideoStream
 
-
 import argparse
 import facenet
 import imutils
@@ -19,6 +18,7 @@ import cv2
 import collections
 from sklearn.svm import SVC
 import pyttsx3
+import time
 
 engine = pyttsx3.init()
 
@@ -79,8 +79,9 @@ def main():
             person_detected = collections.Counter()
 
             cap  = VideoStream(src=0).start()
-
+            count = 0
             while (True):
+                start = time.time()
                 frame = cap.read()
                 frame = imutils.resize(frame, width=600)
                 frame = cv2.flip(frame, 1)
@@ -95,6 +96,8 @@ def main():
                     elif faces_found > 0:
                         det = bounding_boxes[:, 0:4]
                         bb = np.zeros((faces_found, 4), dtype=np.int32)
+                        name = ''
+                        
                         for i in range(faces_found):
                             bb[i][0] = det[i][0]
                             bb[i][1] = det[i][1]
@@ -118,8 +121,7 @@ def main():
                                     np.arange(len(best_class_indices)), best_class_indices]
                                 best_name = class_names[best_class_indices[0]]
                                 print("Name: {}, Probability: {}".format(best_name, best_class_probabilities))
-
-                                if best_class_probabilities > 0.95:
+                                if best_class_probabilities > 0.85:
                                     cv2.rectangle(frame, (bb[i][0], bb[i][1]), (bb[i][2], bb[i][3]), (0, 255, 0), 2)
                                     text_x = bb[i][0]
                                     text_y = bb[i][3] + 20
@@ -131,18 +133,20 @@ def main():
                                                 cv2.FONT_HERSHEY_COMPLEX_SMALL,
                                                 1, (255, 255, 255), thickness=1, lineType=2)
                                     person_detected[best_name] += 1
-                                    engine.say("Đây là {}".format(name))
-                                    engine.runAndWait()
+                                    
                                 else:
                                     cv2.rectangle(frame, (bb[i][0], bb[i][1]), (bb[i][2], bb[i][3]), (0, 255, 0), 2)
                                     text_x = bb[i][0]
                                     text_y = bb[i][3] + 20
-                                    name = "Unknown"
-                                    cv2.putText(frame, name, (text_x, text_y), cv2.FONT_HERSHEY_COMPLEX_SMALL,
+                                    stranger = "Unknown"
+                                    name = "Người lạ"
+                                    cv2.putText(frame, stranger, (text_x, text_y), cv2.FONT_HERSHEY_COMPLEX_SMALL,
                                                 1, (255, 255, 255), thickness=1, lineType=2)
-                                    engine.say("Người lạ")
-                                    engine.runAndWait()
-
+                            count = count + 1
+                            if(count % 15 == 0):
+                                engine.say("Đây là {}".format(name))
+                                engine.runAndWait()
+                                count = 0
                 except:
                     pass
 
@@ -152,6 +156,4 @@ def main():
 
             cap.release()
             cv2.destroyAllWindows()
-
-
 main()
